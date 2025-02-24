@@ -18,6 +18,12 @@ area[name="Toronto"]->.searchArea;
 out center;
 """
 
+# List of random dishes
+random_dishes = ["Pizza", "Sushi", "Burger", "Pasta", "Tacos", "Ramen", "BBQ", "Steak", "Salad", "Falafel"]
+
+# List of random street names in Toronto
+random_streets = ["King St", "Queen St", "Dundas St", "Yonge St", "Spadina Ave", "Bloor St", "Bay St", "College St"]
+
 def generate_random_phone_number(country="CA"):
     """Generate a random phone number based on country code."""
     country_codes = {
@@ -43,15 +49,33 @@ def fetch_restaurant_data():
         return None
 
 def process_data(osm_data):
-    """Extract relevant details from OSM response and add random ratings and phone numbers."""
+    """Extract relevant details from OSM response and add random ratings, dishes, and phone numbers."""
     restaurants = []
 
     for element in osm_data.get("elements", []):
         tags = element.get("tags", {})
+
+        # Assign a random dish if cuisine is not specified
+        cuisine = tags.get("cuisine")
+        if not cuisine:
+            cuisine = random.choice(random_dishes)
+
+        # Assign a random address if it's not provided
+        street = tags.get("addr:street")
+        city = tags.get("addr:city")
+        
+        if not street:
+            street = random.choice(random_streets)
+        
+        if not city:
+            city = "Toronto"  # Default city
+
+        address = f"{street}, {city}"
+
         restaurants.append({
             "Name": tags.get("name", "Unknown"),
-            "Cuisine": tags.get("cuisine", "Not specified"),
-            "Address": tags.get("addr:street", "Unknown") + ", " + tags.get("addr:city", "Unknown"),
+            "Cuisine": cuisine,
+            "Address": address,
             "Phone": generate_random_phone_number("CA"),  
             "Rating": f"{round(random.uniform(1.0, 5.0), 1):.1f}"  # ✅ Ensures one decimal
         })
