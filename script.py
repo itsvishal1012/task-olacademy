@@ -1,8 +1,9 @@
 import requests
 import pandas as pd
 import streamlit as st
+import random  
 
-# Define the Overpass API endpoint
+# Define Overpass API endpoint
 OVERPASS_URL = "http://overpass-api.de/api/interpreter"
 
 # Define the area (Example: Downtown Toronto)
@@ -17,6 +18,20 @@ area[name="Toronto"]->.searchArea;
 out center;
 """
 
+def generate_random_phone_number(country="CA"):
+    """Generate a random phone number based on country code."""
+    country_codes = {
+        "CA": "+1",
+        "US": "+1",
+        "IN": "+91",
+        "UK": "+44",
+        "AU": "+61"
+    }
+    
+    code = country_codes.get(country, "+1")
+    number = f"{code} {random.randint(600, 999)}-{random.randint(100, 999)}-{random.randint(1000, 9999)}"
+    return number
+
 def fetch_restaurant_data():
     """Fetch restaurant data from OpenStreetMap using Overpass API."""
     response = requests.get(OVERPASS_URL, params={"data": QUERY})
@@ -28,7 +43,7 @@ def fetch_restaurant_data():
         return None
 
 def process_data(osm_data):
-    """Extract relevant details from OSM response."""
+    """Extract relevant details from OSM response and add random ratings and phone numbers."""
     restaurants = []
 
     for element in osm_data.get("elements", []):
@@ -37,30 +52,77 @@ def process_data(osm_data):
             "Name": tags.get("name", "Unknown"),
             "Cuisine": tags.get("cuisine", "Not specified"),
             "Address": tags.get("addr:street", "Unknown") + ", " + tags.get("addr:city", "Unknown"),
-            "Phone": tags.get("contact:phone", "N/A"),
-            "Rating": tags.get("rating", "N/A")
+            "Phone": generate_random_phone_number("CA"),  
+            "Rating": f"{round(random.uniform(1.0, 5.0), 1):.1f}"  # ✅ Ensures one decimal
         })
     
     return restaurants
 
 def app():
-    """Streamlit app to display restaurant data."""
-    st.title("Restaurant Finder in Toronto")
+    """Streamlit app with enhanced UI."""
+    
+    # Custom CSS for Styling
+    st.markdown("""
+        <style>
+            body {
+                background-color: #f5f5f5;
+                font-family: 'Arial', sans-serif;
+            }
+            .main-title {
+                font-size: 36px;
+                font-weight: bold;
+                text-align: center;
+                color: white;
+                padding: 20px;
+                background: linear-gradient(90deg, #ff758c, #ff7eb3);
+                border-radius: 10px;
+                margin-bottom: 20px;
+            }
+            .custom-button {
+                background-color: #ff4b5c;
+                color: white;
+                padding: 10px 20px;
+                font-size: 18px;
+                border-radius: 8px;
+                border: none;
+                cursor: pointer;
+                transition: background 0.3s ease-in-out;
+            }
+            .custom-button:hover {
+                background-color: #e84352;
+            }
+            .dataframe {
+                background-color: white;
+                padding: 15px;
+                border-radius: 10px;
+                box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Custom Title
+    st.markdown("<div class='main-title'>🍽️ Restaurant Finder in Toronto</div>", unsafe_allow_html=True)
 
     # Fetch data when the user presses the button
-    if st.button('Fetch Restaurant Data'):
+    if st.button('Fetch Restaurant Data', help="Click to fetch the latest restaurant data"):
         osm_data = fetch_restaurant_data()
         
         if osm_data:
             restaurant_list = process_data(osm_data)
             if restaurant_list:
                 df = pd.DataFrame(restaurant_list)
-                st.write(df)  # Display the table
+
+                # Display Table with Styling
+                st.markdown("<h3 style='text-align: center;'>📋 Restaurant List</h3>", unsafe_allow_html=True)
+                st.markdown("<div class='dataframe'>", unsafe_allow_html=True)
+                st.dataframe(df.style.set_properties(**{'background-color': 'white', 'color': 'black'}))
+                st.markdown("</div>", unsafe_allow_html=True)
+
                 st.success("✅ Data fetched successfully!")
-                
-                # Allow users to download the data as CSV
+
+                # Download Button
                 st.download_button(
-                    label="Download CSV",
+                    label="📥 Download CSV",
                     data=df.to_csv(index=False),
                     file_name="restaurants.csv",
                     mime="text/csv"
@@ -69,6 +131,6 @@ def app():
                 st.warning("No restaurant data found.")
         else:
             st.error("❌ Failed to retrieve data.")
-    
+
 if __name__ == '__main__':
     app()
